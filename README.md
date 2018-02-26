@@ -1,0 +1,3 @@
+## Requirements
+* jq
+* curl 

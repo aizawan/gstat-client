@@ -1,0 +1,83 @@
+
+#!/bin/bash
+CONFFILE="./gstat.conf"
+source $CONFFILE
+
+
+function lock() {
+  URL=${url}/cms/resource
+  hostname=${hostname}
+  username=`whoami`
+  curl -w '\n' ${URL}/mod/${hostname}/ \
+       -d "hostname=${hostname}&locking_user=${username}&is_available=False" -X POST \
+       -o /dev/null \
+       -sS
+}
+
+
+function unlock() {
+  URL=${url}/cms/resource
+  hostname=${hostname}
+  username=`whoami`
+  
+  locking_user=`get_locking_user`
+  function post() {
+    curl -w '\n' ${URL}/mod/${hostname}/ \
+         -d "hostname=${hostname}&locking_user=&is_available=True" -X POST \
+         -o /dev/null \
+         -sS
+  }
+
+  if [ $locking_user = '""' ]; then
+    post
+    exit 0
+  elif [ '"'$username'"' = $locking_user ]; then
+    post
+    exit 0
+  else 
+    echo -e "${locking_user} is using now ... \nUnlocking ? (y/n)"
+    read ans
+
+    if [ $ans = y ]; then
+      post
+      exit 0
+    elif [ $ans = n ]; then
+      exit 0     
+    else
+      echo -e "Press y/n \nAborting"
+      exit 1 
+    fi
+
+  fi
+
+}
+
+
+function get_is_available() {
+  URL=${url}/api/resource
+  json=`curl ${URL}/${hostname} -sS`
+  return `echo ${json} | jq ".resources[].is_available"`
+}
+
+function get_locking_user() {
+  URL=${url}/api/resource
+  json=`curl ${URL}/${hostname} -sS`
+  lu=`echo ${json} | jq ".resources[].locking_user" `
+  echo "$lu" 
+}
+
+
+
+
+case $1 in 
+  lock)
+    lock;;
+  unlock)
+    unlock;;
+  check)
+	  check;;
+  *)
+	  echo "Usage: gstatc [lock] [unlock] [check]"
+	  exit 1;;
+esac
+

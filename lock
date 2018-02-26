@@ -1,6 +1,0 @@
-#!/bin/bash
-URL=http://127.0.0.1:8000/cms/resource
-hostname=`hostname`
-username=`whoami`
-curl -w '\n' ${URL}/mod/${hostname}/ \
-     -d "hostname=${hostname}&locking_user=${username}&is_available=False" -X POST
