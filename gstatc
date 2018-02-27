@@ -1,4 +1,3 @@
-
 #!/bin/bash
 CONFFILE="./gstat.conf"
 source $CONFFILE
@@ -6,13 +5,45 @@ source $CONFFILE
 
 function lock() {
   URL=${url}/cms/resource
+
   hostname=${hostname}
   username=`whoami`
-  curl -w '\n' ${URL}/mod/${hostname}/ \
-       -d "hostname=${hostname}&locking_user=${username}&is_available=False" -X POST \
-       -o /dev/null \
-       -sS
+    
+  function post() {
+    curl -w '\n' ${URL}/mod/${hostname}/ \
+         -d "hostname=${hostname}&locking_user=${username}&is_available=False" -X POST \
+         -o /dev/null \
+         -sS
+  }
+  get_is_available
+  is_ava=$?
+  if [ ${is_ava} -lt 1 ]; then
+    echo -e "${hostname} is available. \nLocking ..."
+    post
+    exit 0
+  else
+    locking_user=`get_locking_user`
+    if [ '"'$username'"' = $locking_user ]; then
+      echo -e "You are using now. \nOverwriting ..."
+      post
+      exit 0
+    else 
+      echo -en "${locking_user} is using now ... \nOverwriting ? (y/n) "
+      read ans
+
+      if [ $ans = y ]; then
+        post
+        exit 0
+      elif [ $ans = n ]; then
+        exit 0     
+      else
+        echo -e "Press y/n \nAborting ..."
+        exit 1 
+      fi
+    fi
+  fi
 }
+
 
 
 function unlock() {
@@ -29,13 +60,15 @@ function unlock() {
   }
 
   if [ $locking_user = '""' ]; then
+    echo "Unlocking ..."
     post
     exit 0
   elif [ '"'$username'"' = $locking_user ]; then
+    echo "Unlocking ..."
     post
     exit 0
   else 
-    echo -e "${locking_user} is using now ... \nUnlocking ? (y/n)"
+    echo -en "${locking_user} is using now ... \nUnlocking ? (y/n) "
     read ans
 
     if [ $ans = y ]; then
@@ -54,19 +87,22 @@ function unlock() {
 
 
 function get_is_available() {
-  URL=${url}/api/resource
+  local URL=${url}/api/resource
   json=`curl ${URL}/${hostname} -sS`
-  return `echo ${json} | jq ".resources[].is_available"`
+  is_ava=`echo ${json} | jq ".resources[].is_available"`
+  if [ ${is_ava} = true ]; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 function get_locking_user() {
-  URL=${url}/api/resource
+  local URL=${url}/api/resource
   json=`curl ${URL}/${hostname} -sS`
   lu=`echo ${json} | jq ".resources[].locking_user" `
   echo "$lu" 
 }
-
-
 
 
 case $1 in 
@@ -75,9 +111,8 @@ case $1 in
   unlock)
     unlock;;
   check)
-	  check;;
+    check;;
   *)
-	  echo "Usage: gstatc [lock] [unlock] [check]"
-	  exit 1;;
+    echo "Usage: gstatc [lock] [unlock] [check]"
+    exit 1;;
 esac
-
