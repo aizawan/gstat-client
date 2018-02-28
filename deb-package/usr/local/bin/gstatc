@@ -1,5 +1,5 @@
 #!/bin/bash
-CONFFILE="./gstat.conf"
+CONFFILE="/etc/gstat-client/gstatc.conf"
 source $CONFFILE
 
 

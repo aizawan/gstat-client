@@ -1,0 +1,6 @@
+Package: gstat-client
+Maintainer: Shunsuke Nakatsuka <nakatsuka@cv.info.gifu-u.ac.jp>
+Architecture: amd64
+Version: 0.0.1
+Description: Client application for "gstat".
+Depends: jq, curl
